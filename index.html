@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PermitPronto</title>
+  
+  <!-- iOS Fullscreen & Web App Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PermitPronto" />
+
+  <style>
+    :root {
+      --primary-green: #10B981;
+      --primary-green-active: #059669;
+      --teal-dark: #0f3d3e;
+      --teal-light-bg: #e6f4ea;
+      --bg-slate: #f8fafc;
+      --card-border: #e2e8f0;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-slate);
+      color: var(--teal-dark);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Container locked to iPhone screen ratio */
+    .app-viewport {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 0 30px rgba(0,0,0,0.08);
+      padding: 24px 20px env(safe-area-inset-bottom, 20px) 20px;
+    }
+
+    /* Brand Header */
+    .brand-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding-top: 14px;
+      padding-bottom: 18px;
+    }
+
+    .brand-logo-icon {
+      width: 32px;
+      height: 32px;
+      fill: var(--primary-green);
+    }
+
+    .brand-title {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--teal-dark);
+      letter-spacing: -0.5px;
+    }
+
+    /* Progress bar */
+    .step-indicator {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+
+    .step-pill {
+      flex: 1;
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      transition: background 0.3s ease;
+    }
+
+    .step-pill.active {
+      background: var(--primary-green);
+    }
+
+    /* Screen management */
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Typography */
+    .screen-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--teal-dark);
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+
+    /* High-contrast Cards */
+    .card {
+      background: #ffffff;
+      border: 2px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.02);
+    }
+
+    .field-label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .field-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--teal-dark);
+      word-break: break-word;
+    }
+
+    /* Grid for Project Details */
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .details-grid .card {
+      margin-bottom: 0;
+    }
+
+    /* Checklist Items */
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: #fcfdfd;
+      border: 1.5px solid var(--card-border);
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--teal-dark);
+    }
+
+    .icon-check-circle {
+      width: 26px;
+      height: 26px;
+      fill: var(--primary-green);
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Upload status cards */
+    .upload-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 2px solid #a7f3d0;
+      background: var(--teal-light-bg);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .upload-info h4 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--teal-dark);
+      margin-bottom: 2px;
+    }
+
+    .upload-info p {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #059669;
+    }
+
+    /* Fullscreen Status Overlays inside steps (Loading & Success) */
+    .state-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px 10px;
+      flex: 1;
+    }
+
+    .spinner {
+      width: 68px;
+      height: 68px;
+      border: 6px solid #e2e8f0;
+      border-top: 6px solid var(--primary-green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 22px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .success-icon-badge {
+      width: 86px;
+      height: 86px;
+      background: var(--teal-light-bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .success-icon-badge svg {
+      width: 52px;
+      height: 52px;
+      fill: var(--primary-green);
+    }
+
+    .state-title {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--teal-dark);
+      margin-bottom: 8px;
+    }
+
+    .state-subtitle {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Bottom Action Area */
+    .action-container {
+      margin-top: auto;
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* High-contrast Buttons */
+    .btn {
+      width: 100%;
+      height: 58px;
+      border-radius: 14px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+      transition: transform 0.08s ease, background-color 0.15s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background-color: var(--primary-green);
+      color: #ffffff;
+    }
+
+    .btn-secondary {
+      background-color: var(--teal-dark);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(15, 61, 62, 0.25);
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 14px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-viewport">
+  
+  <!-- Header with Paper Airplane Logo -->
+  <header class="brand-header">
+    <svg class="brand-logo-icon" viewBox="0 0 24 24">
+      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+    </svg>
+    <span class="brand-title">PermitPronto</span>
+  </header>
+
+  <!-- Step Bar -->
+  <div class="step-indicator">
+    <div class="step-pill active" id="dot-1"></div>
+    <div class="step-pill" id="dot-2"></div>
+    <div class="step-pill" id="dot-3"></div>
+    <div class="step-pill" id="dot-4"></div>
+    <div class="step-pill" id="dot-5"></div>
+  </div>
+
+  <!-- SCREEN 1: Project Address -->
+  <section class="screen active" id="screen-1">
+    <h1 class="screen-title">New Project</h1>
+
+    <div class="card">
+      <div class="field-label">Property Address</div>
+      <div class="field-value">4287 Lake Underhill Rd</div>
+    </div>
+
+    <div class="card">
+      <div class="field-label">Project Name</div>
+      <div class="field-value">Miller Residence</div>
+    </div>
+
+    <div class="card">
+      <div class="field-label">Municipality</div>
+      <div class="field-value">City of Orlando</div>
+    </div>
+
+    <div class="action-container">
+      <button class="btn btn-primary" onclick="goToStep(2)">Continue</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: Project Details -->
+  <section class="screen" id="screen-2">
+    <h1 class="screen-title">Roofing Details</h1>
+
+    <div class="card">
+      <div class="field-label">Project Type</div>
+      <div class="field-value">Roof Replacement</div>
+    </div>
+
+    <div class="card">
+      <div class="field-label">Roof Type</div>
+      <div class="field-value">Architectural Shingle</div>
+    </div>
+
+    <div class="details-grid">
+      <div class="card">
+        <div class="field-label">Roof Size</div>
+        <div class="field-value">25 Squares</div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">Value</div>
+        <div class="field-value">$18,500</div>
+      </div>
+    </div>
+
+    <div class="action-container">
+      <button class="btn btn-primary" onclick="goToStep(3)">Continue</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: Generate Documents -->
+  <section class="screen" id="screen-3">
+    
+    <!-- State 1: Default Checklist -->
+    <div id="screen3-content" style="display: flex; flex-direction: column; flex: 1;">
+      <h1 class="screen-title">Your Permit Package</h1>
+
+      <div class="checklist">
+        <div class="check-item">
+          <svg class="icon-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Property Information
+        </div>
+        <div class="check-item">
+          <svg class="icon-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Roofing Details
+        </div>
+        <div class="check-item">
+          <svg class="icon-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Permit Application
+        </div>
+        <div class="check-item">
+          <svg class="icon-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Product Approval Documents
+        </div>
+      </div>
+
+      <div class="action-container">
+        <button class="btn btn-primary" onclick="simulateGeneration()">Generate Permit Package</button>
+      </div>
+    </div>
+
+    <!-- State 2: Quick Loading Spinner -->
+    <div id="screen3-loading" class="state-view">
+      <div class="spinner"></div>
+      <div class="state-title">Generating Package...</div>
+      <div class="state-subtitle">Compiling Florida building codes</div>
+    </div>
+
+    <!-- State 3: Ready + Print Button -->
+    <div id="screen3-ready" class="state-view">
+      <div class="success-icon-badge">
+        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+      <div class="state-title">Permit Package Ready!</div>
+      <div class="state-subtitle">4 Documents ready for printing</div>
+
+      <div class="action-container" style="width: 100%; margin-top: 36px;">
+        <button class="btn btn-secondary" onclick="goToStep(4)">Print Documents</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- SCREEN 4: Upload Signed Documents -->
+  <section class="screen" id="screen-4">
+    <h1 class="screen-title">Submit Your Permit</h1>
+
+    <div class="upload-card">
+      <div class="upload-info">
+        <h4>Signed Permit Application</h4>
+        <p>Uploaded & Verified</p>
+      </div>
+      <svg class="icon-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    </div>
+
+    <div class="upload-card">
+      <div class="upload-info">
+        <h4>Signed Notice of Commencement</h4>
+        <p>Uploaded & Verified</p>
+      </div>
+      <svg class="icon-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    </div>
+
+    <div class="action-container">
+      <button class="btn btn-primary" onclick="goToStep(5)">Continue to Final Review</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 5: Final Review & Submission -->
+  <section class="screen" id="screen-5">
+    
+    <!-- State 1: Review Cards -->
+    <div id="screen5-content" style="display: flex; flex-direction: column; flex: 1;">
+      <h1 class="screen-title">Final Review</h1>
+
+      <div class="card">
+        <div class="field-label">Property Address</div>
+        <div class="field-value">4287 Lake Underhill Rd</div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">Project Type</div>
+        <div class="field-value">Roof Replacement (25 Sq)</div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">Municipality</div>
+        <div class="field-value">Orlando, FL</div>
+      </div>
+
+      <div class="card" style="border-color: #a7f3d0; background: var(--teal-light-bg);">
+        <div class="field-label" style="color: #065f46;">Documents</div>
+        <div class="field-value" style="color: #065f46; display: flex; align-items: center; gap: 8px;">
+          <svg style="width: 22px; height: 22px; fill: var(--primary-green);" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          Ready to Submit
+        </div>
+      </div>
+
+      <div class="action-container">
+        <button class="btn btn-primary" onclick="simulateSubmission()">Submit Permit</button>
+      </div>
+    </div>
+
+    <!-- State 2: Submission Loading Spinner -->
+    <div id="screen5-loading" class="state-view">
+      <div class="spinner"></div>
+      <div class="state-title">Submitting Permit...</div>
+      <div class="state-subtitle">Transmitting to City Portal</div>
+    </div>
+
+    <!-- State 3: Final Success State -->
+    <div id="screen5-success" class="state-view">
+      <div class="success-icon-badge">
+        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+      <div class="state-title">Permit Submitted Successfully!</div>
+      <div class="state-subtitle">Confirmation #ORL-2026-8821</div>
+
+      <div class="footer-logo">
+        <svg style="width: 18px; height: 18px; fill: var(--primary-green);" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        <span style="font-weight: 700; color: var(--teal-dark); font-size: 0.95rem;">PermitPronto</span>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<script>
+  function goToStep(stepNumber) {
+    // Hide all screens
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+    // Update progress bar pills
+    for (let i = 1; i <= 5; i++) {
+      const dot = document.getElementById(`dot-${i}`);
+      if (i <= stepNumber) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+    }
+
+    // Show target screen
+    const target = document.getElementById(`screen-${stepNumber}`);
+    if (target) target.classList.add('active');
+    
+    window.scrollTo(0, 0);
+  }
+
+  // Fast loading animations tailored for video shooting (approx 1.2s delay)
+  function simulateGeneration() {
+    document.getElementById('screen3-content').style.display = 'none';
+    document.getElementById('screen3-loading').style.display = 'flex';
+
+    setTimeout(() => {
+      document.getElementById('screen3-loading').style.display = 'none';
+      document.getElementById('screen3-ready').style.display = 'flex';
+    }, 1100);
+  }
+
+  function simulateSubmission() {
+    document.getElementById('screen5-content').style.display = 'none';
+    document.getElementById('screen5-loading').style.display = 'flex';
+
+    setTimeout(() => {
+      document.getElementById('screen5-loading').style.display = 'none';
+      document.getElementById('screen5-success').style.display = 'flex';
+    }, 1200);
+  }
+</script>
+
+</body>
+</html>
